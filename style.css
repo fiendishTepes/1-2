@@ -1,0 +1,30 @@
+/* style.css */
+body {
+    font-family: Arial, sans-serif;
+    /* ปรับขนาดฟอนต์เริ่มต้นให้ใหญ่ขึ้นสำหรับสายตายาว/สั้น */
+    font-size: 1.1rem; 
+}
+
+/* ทำให้ปุ่มและ input มีขนาดใหญ่ สบายตาบนมือถือ */
+.form-control-lg, .btn-lg, .form-select-lg {
+    padding: 0.75rem 1.25rem;
+    font-size: 1.25rem;
+    border-radius: 0.5rem;
+}
+
+/* ทำให้ตารางดูง่ายบนมือถือ - Responsive */
+.table th, .table td {
+    padding: 1rem 0.5rem;
+    vertical-align: middle;
+}
+
+/* สีสำหรับสถานะ */
+.status-pending {
+    color: orange;
+    font-weight: bold;
+}
+
+.status-received {
+    color: green;
+    font-weight: bold;
+}
