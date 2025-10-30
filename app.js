@@ -22,88 +22,49 @@ function saveSalesData() {
 
 /**
  * คำนวณยอดเงินเข้าบัญชีจริงในแต่ละวัน 
- * ตามหลักการ: เงินเข้า 50% ของยอดขายวันก่อนหน้า + ยอดคงเหลือที่ค้างมาจากวันก่อนๆ
  * @param {Array} data - ข้อมูลยอดขายทั้งหมด (ต้องเรียงตามวันที่)
  * @returns {Array} - ข้อมูลยอดขายพร้อมการคำนวณเงินเข้า
  */
 function calculatePayments(data) {
     if (data.length === 0) return [];
 
-    // จำลองการเงินคงเหลือในระบบ (ใช้ Map เพื่อให้เข้าถึงง่ายด้วย Key เป็น 'YYYY-MM-DD')
-    let remainingBalances = new Map(); 
     let calculatedData = [];
 
     data.forEach((sale, index) => {
         // ยอดขายของวันนั้น
         const dailySale = parseFloat(sale.amount);
-        // เงินที่จะเข้าบัญชีในวันถัดไป (50% ของยอดขายวันนี้)
+        // เงิน 50% ที่จะเข้าบัญชีในวันถัดไป
         const nextDayPayment = dailySale / 2;
-        // ยอดคงเหลือในระบบของวันนี้ (50% ของยอดขายวันนี้)
+        // ยอดคงเหลือในระบบของวันนี้ (50% ที่เหลือ)
         const currentRemaining = dailySale / 2; 
 
-        // ----------------- การคำนวณ "เงินเข้าบัญชีจริงในวันนี้" -----------------
-        let actualPaymentToday = 0;
-
-        // หา "วันถัดไป" (วันที่เงินควรจะเข้า)
-        const paymentDate = new Date(sale.date);
-        paymentDate.setDate(paymentDate.getDate() + 1);
-        const paymentDateStr = paymentDate.toISOString().substring(0, 10);
-
-        // 1. เงิน 50% ที่เข้าจากยอดขาย "เมื่อวาน" (ยอดที่กำลังถูกประมวลผล)
-        actualPaymentToday += nextDayPayment;
-
-        // 2. ตรวจสอบยอดคงเหลือที่ค้างอยู่ (ยอด 50% ที่ถูกแบ่งชำระจากวันก่อนหน้าเมื่อวาน)
-        // ในโปรเจกต์คนละครึ่งเฟส 3 เป็นต้นไป (2564) เงินจะเข้า 50% ในวันถัดไป และ 50% ที่เหลือจะเข้ามาในรอบถัดไป
-        // หากต้องการให้เป็นเหมือนการ "ทบ" ยอดคงเหลือ
-        
-        // เราจะเก็บยอดคงเหลือ (50% ที่สอง) ของยอดขายนี้ ไว้รอเข้าในรอบถัดไป (สมมติว่าเป็นรอบที่ 2)
-        // เพื่อความเรียบง่ายตามโจทย์ "วันนี้เงินเข้าแล้ว ให้เรา กด กว่าเข้าแล้วเหลือเท่านี้"
-        // เราจะกำหนดให้ยอด 50% ที่เข้า "วันนี้" คือยอดขายของเมื่อวาน
-        
-        // *** ปรับการคำนวณให้สอดคล้องกับหลักการเงินเข้าสองรอบ (50%+50%):
-        
-        // เงินเข้าบัญชีวันถัดไป (50% แรก): คือ nextDayPayment 
-        // เงินคงเหลือในระบบ (50% ที่สอง): คือ currentRemaining ที่จะเข้าในรอบถัดไป
-
-        // หากเรามีฟิลด์ `isReceived` ในข้อมูล แสดงว่าเราต้องติดตามสถานะเงินเข้า 2 ส่วน:
-        // ส่วนที่ 1: เงิน 50% แรก (วันถัดไป)
-        // ส่วนที่ 2: เงิน 50% ที่สอง (ที่เหลือ)
-        
-        // เพื่อความง่าย (Simple UI) ตามโจทย์:
-        // เงินเข้าบัญชีจริงในวันนี้ (Actual Payment) = 50% ของยอดขายเมื่อวาน + ยอดคงเหลือจากวันก่อนๆ ที่ถูก "Mark as Received" แล้ว
-        
-        // --- ใช้หลักการที่ผู้ใช้ให้มา:
-        // วันที่ 2: เงินเข้า = 600 (จาก 1200 วันที่ 1) + 500 (ที่เหลือของวันที่ 1) = 1100
-        // วันที่ 3: เงินเข้า = 650 (จาก 1300 วันที่ 2) + 600 (ที่เหลือของวันที่ 2) = 1250
-
-        // ดังนั้น **ยอดเงินเข้าในวันที่ $T+1$** คือ **$50\%$ ของยอดขายวันที่ $T$** **บวกกับ** **$50\%$ ที่เหลือของยอดขายวันที่ $T-1$**
-
-        // เราจะหาข้อมูลของ 'เมื่อวาน' (T-1) เพื่อหา 'ยอดคงเหลือ'
-        const yesterdayData = data[index - 1]; 
-        let yesterdayRemaining = 0;
         
         // 50% ของยอดขายวันนี้: คือ 'เงินเข้าวันถัดไป'
         sale.nextDayPayment = nextDayPayment;
         // 50% ของยอดขายวันนี้: คือ 'ยอดคงเหลือในระบบ' 
         sale.remainingBalance = currentRemaining;
         
-        // หากไม่ใช่รายการแรก และมี 'ยอดคงเหลือในระบบ' จากวันก่อนหน้า
+        let actualPaymentToday = 0;
+
+        // **คำนวณยอดเงินเข้าบัญชีจริงในวันนี้ (ตามโจทย์)**
+        // ยอดเข้าบัญชีวันนี้ = 50% ของยอดขายเมื่อวาน + 50% ที่เหลือของยอดขายวันก่อนหน้าเมื่อวาน
+        
+        const yesterdayData = data[index - 1]; 
+        
         if (yesterdayData) {
-            yesterdayRemaining = yesterdayData.remainingBalance;
+            // ยอด 50% แรกจากเมื่อวาน (ยอดเข้าวันถัดไปของเมื่อวาน)
+            const paymentFromYesterday = yesterdayData.nextDayPayment;
+            // ยอด 50% ที่เหลือจากวันก่อนหน้าเมื่อวาน (ยอดคงเหลือในระบบของเมื่อวาน)
+            const remainingFromDayBefore = yesterdayData.remainingBalance;
             
-            // **เงินเข้าบัญชีจริงในวันนี้ (T+1)**
-            // คือ 50% ของยอดขายเมื่อวาน (yesterdayData.nextDayPayment)
-            // บวกกับ 50% ที่เหลือของยอดขายวันก่อนหน้าเมื่อวาน (yesterdayData.remainingBalance)
-            sale.actualPaymentToday = yesterdayData.nextDayPayment + yesterdayRemaining;
+            actualPaymentToday = paymentFromYesterday + remainingFromDayBefore;
         } else {
              // รายการแรก (วันที่ 1): จะไม่มีเงินเข้าบัญชี
-             sale.actualPaymentToday = 0;
+             actualPaymentToday = 0;
         }
 
-        // กำหนดสถานะการรับเงิน (isReceived) ให้กับรายการที่ถูกบันทึก
-        // ในข้อมูลของเรา จะเป็นสถานะการรับเงินของ "ยอดขาย" ในวันนี้
-        // sale.isReceived จะเป็น true/false สำหรับยอดขายของ **วันนี้** (dailySale)
-        // เพื่อให้สอดคล้องกับ UI เราจะให้ isReceived คือสถานะการรับเงิน **Actual Payment Today**
+        sale.actualPaymentToday = actualPaymentToday;
+
         if (sale.isReceived === undefined) {
              sale.isReceived = false; 
         }
@@ -143,11 +104,9 @@ function populateMonthSelector() {
     });
 
     // ตั้งค่าเดือนปัจจุบันเป็นค่าเริ่มต้น
-    if (uniqueMonths.length > 0) {
+    if (uniqueMonths.length > 0 && selector.value !== 'all') {
         selector.value = uniqueMonths[0];
-    } else {
-        selector.value = 'all';
-    }
+    } 
 }
 
 // แปลงตัวเลขเดือนเป็นชื่อเดือนภาษาไทย
@@ -180,20 +139,20 @@ function displaySalesData() {
     }
     
     // อัพเดทชื่อเดือนที่แสดง
-    const [year, month] = selectedMonth.split('-');
-    document.getElementById('currentMonthYear').textContent = (selectedMonth === 'all' ? 'ทั้งหมด' : `${getMonthName(parseInt(month))} ${year}`);
+    const monthYearText = (selectedMonth === 'all' ? 'ทั้งหมด' : 
+        selectedMonth.includes('-') ? `${getMonthName(parseInt(selectedMonth.split('-')[1]))} ${selectedMonth.split('-')[0]}` : '');
+    document.getElementById('currentMonthYear').textContent = monthYearText;
 
 
     filteredData.forEach((sale, index) => {
-        const row = tableBody.insertRow();
+        const originalIndex = salesData.findIndex(d => d.date === sale.date);
         
         // สถานะและคลาส
+        // Note: สถานะ isReceived ในโค้ดนี้หมายถึงการรับเงินของยอด Actual Payment Today
         const statusClass = sale.isReceived ? 'status-received' : 'status-pending';
         const statusText = sale.isReceived ? '✅ ได้รับแล้ว' : 'รอรับ / ยังไม่กด';
 
-        // หา Index เดิมใน Array salesData (สำคัญสำหรับการแก้ไข/ลบ)
-        const originalIndex = salesData.findIndex(d => d.date === sale.date);
-
+        const row = tableBody.insertRow();
         row.innerHTML = `
             <td data-label="วันที่">${formatDate(sale.date)}</td>
             <td data-label="ยอดขาย (บ.)">${sale.amount.toFixed(2)}</td>
@@ -201,10 +160,12 @@ function displaySalesData() {
             <td data-label="เหลือในระบบ (บ.)">${sale.remainingBalance.toFixed(2)}</td>
             <td data-label="ยอดเข้าบัญชีจริง (บ.)"><strong>${sale.actualPaymentToday.toFixed(2)}</strong></td>
             <td data-label="สถานะเข้าบัญชี" class="${statusClass}">
-                <button class="btn btn-sm ${sale.isReceived ? 'btn-success' : 'btn-warning'}" 
-                        onclick="toggleReceivedStatus(${originalIndex})">
-                    ${statusText}
-                </button>
+                ${sale.actualPaymentToday > 0 ? // แสดงปุ่มเฉพาะวันที่ควรมีเงินเข้า
+                    `<button class="btn btn-sm ${sale.isReceived ? 'btn-success' : 'btn-warning'}" 
+                             onclick="toggleReceivedStatus(${originalIndex})">
+                        ${statusText}
+                    </button>` : 'N/A'
+                }
             </td>
             <td data-label="เครื่องมือ">
                 <button class="btn btn-sm btn-info me-2" onclick="editSale(${originalIndex}, '${sale.date}', ${sale.amount})">✏️</button>
@@ -217,7 +178,8 @@ function displaySalesData() {
 // ฟอร์แมตวันที่ให้เป็น D/M/Y (แบบไทย)
 function formatDate(dateString) {
     const [year, month, day] = dateString.split('-');
-    return `${parseInt(day)}/${parseInt(month)}/${parseInt(year) + 543}`;
+    // แปลงปี พ.ศ. (+543)
+    return `${parseInt(day)}/${parseInt(month)}/${parseInt(year)}`; 
 }
 
 
@@ -232,7 +194,7 @@ document.getElementById('saveSaleBtn').addEventListener('click', () => {
     const date = dateInput.value;
     const amount = parseFloat(amountInput.value);
 
-    if (!date || isNaN(amount) || amount <= 0) {
+    if (!date || isNaN(amount) || amount < 0) { // อนุญาตให้เป็น 0 ได้
         Swal.fire('ข้อผิดพลาด!', 'กรุณาใส่วันที่และยอดขายที่ถูกต้อง', 'error');
         return;
     }
@@ -242,13 +204,13 @@ document.getElementById('saveSaleBtn').addEventListener('click', () => {
     if (existingIndex !== -1) {
         // อัพเดทข้อมูลเดิม
         salesData[existingIndex].amount = amount;
-        Swal.fire('อัพเดทสำเร็จ!', `ยอดขายวันที่ ${formatDate(date)} ถูกอัพเดทแล้ว`, 'success');
+        Swal.fire('อัพเดทสำเร็จ!', `ยอดขายวันที่ ${formatDate(date)} ถูกอัพเดทเป็น ${amount} บาท`, 'success');
     } else {
         // เพิ่มข้อมูลใหม่
         const newSale = {
             date: date,
             amount: amount,
-            isReceived: false // กำหนดค่าเริ่มต้นเป็น false
+            isReceived: false // สถานะเริ่มต้นสำหรับการรับเงิน
         };
         salesData.push(newSale);
         Swal.fire('บันทึกสำเร็จ!', `บันทึกยอดขายวันที่ ${formatDate(date)} จำนวน ${amount} บาท`, 'success');
@@ -275,7 +237,7 @@ function editSale(index, currentDate, currentAmount) {
         focusConfirm: false,
         preConfirm: () => {
             const newAmount = parseFloat(document.getElementById('swal-input1').value);
-            if (isNaN(newAmount) || newAmount <= 0) {
+            if (isNaN(newAmount) || newAmount < 0) {
                 Swal.showValidationMessage('กรุณาใส่ตัวเลขที่ถูกต้อง');
                 return false;
             }
@@ -318,10 +280,18 @@ function deleteSale(index) {
 
 // 4. สลับสถานะได้รับเงินแล้ว
 function toggleReceivedStatus(index) {
+    const saleDate = salesData[index].date;
     const currentStatus = salesData[index].isReceived;
     salesData[index].isReceived = !currentStatus;
     saveSalesData();
     displaySalesData();
+    Swal.fire({
+        icon: 'info',
+        title: 'สถานะอัพเดท',
+        text: `ยอดเงินโอนเข้าบัญชีจากยอดขายวันที่ ${formatDate(saleDate)} ถูกตั้งค่าเป็น ${!currentStatus ? 'ได้รับแล้ว' : 'รอรับ'}`,
+        timer: 1500,
+        showConfirmButton: false
+    });
 }
 
 // 5. ล้างข้อมูลทั้งหมด
@@ -375,7 +345,10 @@ document.getElementById('exportBtn').addEventListener('click', () => {
 document.getElementById('importBtn').addEventListener('click', () => {
     Swal.fire({
         title: 'นำเข้าข้อมูล (Import)',
-        html: '<input type="file" id="importFile" accept=".xlsx, .xls" class="swal2-file">',
+        html: `
+            <p><strong>หมายเหตุ:</strong> ไฟล์ Excel ควรมีคอลัมน์ "วันที่" (รูปแบบ YYYY-MM-DD) และ "ยอดขายคนละครึ่ง (บาท)"</p>
+            <input type="file" id="importFile" accept=".xlsx, .xls" class="swal2-file">
+        `,
         showCancelButton: true,
         confirmButtonText: 'นำเข้า',
         preConfirm: () => {
@@ -395,23 +368,18 @@ document.getElementById('importBtn').addEventListener('click', () => {
                 const workbook = XLSX.read(data, { type: 'array' });
                 const sheetName = workbook.SheetNames[0];
                 const worksheet = workbook.Sheets[sheetName];
-                // แปลงข้อมูลเป็น JSON Array
                 const json = XLSX.utils.sheet_to_json(worksheet); 
                 
-                // แปลงโครงสร้างให้เข้ากับ salesData 
                 const importedData = json.map(row => ({
-                    date: row['วันที่'], // ต้องตรงกับชื่อคอลัมน์ในไฟล์
+                    date: row['วันที่'], 
                     amount: parseFloat(row['ยอดขายคนละครึ่ง (บาท)']),
-                    // isReceived อาจจะต้องกำหนดค่าเริ่มต้นหรือตามข้อมูลในไฟล์
                     isReceived: row['สถานะการรับเงิน'] === 'ได้รับแล้ว' 
                 })).filter(item => item.date && !isNaN(item.amount));
                 
-                // ผนวกข้อมูลที่นำเข้ากับข้อมูลเดิม (สามารถเลือกที่จะแทนที่ได้)
-                // เราจะใช้วิธีผนวกและแทนที่รายการที่มีวันที่ซ้ำกัน
                 importedData.forEach(item => {
                     const existingIndex = salesData.findIndex(sale => sale.date === item.date);
                     if (existingIndex !== -1) {
-                         salesData[existingIndex] = item; // แทนที่
+                         salesData[existingIndex] = item; // แทนที่รายการที่มีวันที่ซ้ำ
                     } else {
                          salesData.push(item); // เพิ่มใหม่
                     }
@@ -421,7 +389,7 @@ document.getElementById('importBtn').addEventListener('click', () => {
                 loadSalesData();
                 populateMonthSelector();
                 displaySalesData();
-                Swal.fire('นำเข้าสำเร็จ!', `นำเข้าข้อมูล ${importedData.length} รายการ`, 'success');
+                Swal.fire('นำเข้าสำเร็จ!', `นำเข้า/อัพเดทข้อมูล ${importedData.length} รายการ`, 'success');
 
             };
             reader.readAsArrayBuffer(file);
@@ -451,6 +419,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // 4. PWA Service Worker (สำหรับทำให้ติดตั้งได้และทำงาน Offline)
     if ('serviceWorker' in navigator) {
         window.addEventListener('load', () => {
+            // ต้องแน่ใจว่า service-worker.js อยู่ใน root directory
             navigator.serviceWorker.register('/service-worker.js')
                 .then(reg => console.log('Service Worker: Registered'))
                 .catch(err => console.error('Service Worker: Registration failed: ', err));

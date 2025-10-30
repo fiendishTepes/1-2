@@ -6,16 +6,16 @@ const urlsToCache = [
     '/index.html',
     '/style.css',
     '/app.js',
+    '/manifest.json',
     // URLs ของ Library ที่ใช้
     'https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css',
     'https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js',
     'https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css',
     'https://cdn.jsdelivr.net/npm/sweetalert2@11',
     'https://cdn.sheetjs.com/xlsx-0.20.2/package/dist/xlsx.full.min.js',
-    // ไฟล์ไอคอน (ถ้ามี)
+    // ไฟล์ไอคอน (ต้องมีในโฟลเดอร์)
     '/icon-192.png',
-    '/icon-512.png',
-    '/manifest.json'
+    '/icon-512.png'
 ];
 
 // ติดตั้ง Service Worker และ Caching ทรัพยากร
