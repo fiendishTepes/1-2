@@ -17,7 +17,7 @@ function saveSalesData() {
 }
 
 // ----------------------------------------------------------------------
-// หลักการคำนวณ: เงินเข้าบัญชีและยอดคงเหลือ
+// หลักการคำนวณ: เงินเข้าบัญชีและยอดคงเหลือ (ปรับปรุงแล้ว)
 // ----------------------------------------------------------------------
 
 /**
@@ -31,36 +31,36 @@ function calculatePayments(data) {
     let calculatedData = [];
 
     data.forEach((sale, index) => {
-        // ยอดขายของวันนั้น
         const dailySale = parseFloat(sale.amount);
-        // เงิน 50% ที่จะเข้าบัญชีในวันถัดไป
-        const nextDayPayment = dailySale / 2;
-        // ยอดคงเหลือในระบบของวันนี้ (50% ที่เหลือ)
+        // 50% แรกที่จะเข้าในวันถัดไป
+        const nextDayPayment = dailySale / 2; 
+        // 50% ที่สอง (ยอดคงเหลือ) ที่จะถูกทบไปจ่ายในวันมะรืน
         const currentRemaining = dailySale / 2; 
 
-        
-        // 50% ของยอดขายวันนี้: คือ 'เงินเข้าวันถัดไป'
         sale.nextDayPayment = nextDayPayment;
-        // 50% ของยอดขายวันนี้: คือ 'ยอดคงเหลือในระบบ' 
         sale.remainingBalance = currentRemaining;
         
         let actualPaymentToday = 0;
 
-        // **คำนวณยอดเงินเข้าบัญชีจริงในวันนี้ (ตามโจทย์)**
-        // ยอดเข้าบัญชีวันนี้ = 50% ของยอดขายเมื่อวาน + 50% ที่เหลือของยอดขายวันก่อนหน้าเมื่อวาน
+        // **คำนวณยอดเงินเข้าบัญชีจริงในวันนี้ (T)**
+        // ยอดเข้าบัญชีวันนี้ (T) = 50% ของยอดขาย (T-1) + ยอดคงเหลือ 50% ของ (T-2)
         
+        // ข้อมูลของ 'เมื่อวาน' (T-1)
         const yesterdayData = data[index - 1]; 
         
+        // ข้อมูลของ 'วันก่อนหน้าเมื่อวาน' (T-2)
+        const dayBeforeYesterdayData = data[index - 2]; 
+
         if (yesterdayData) {
-            // ยอด 50% แรกจากเมื่อวาน (ยอดเข้าวันถัดไปของเมื่อวาน)
+            // 1. ยอดเงิน 50% แรกจากยอดขายของ T-1
             const paymentFromYesterday = yesterdayData.nextDayPayment;
-            // ยอด 50% ที่เหลือจากวันก่อนหน้าเมื่อวาน (ยอดคงเหลือในระบบของเมื่อวาน)
-            const remainingFromDayBefore = yesterdayData.remainingBalance;
-            
-            actualPaymentToday = paymentFromYesterday + remainingFromDayBefore;
-        } else {
-             // รายการแรก (วันที่ 1): จะไม่มีเงินเข้าบัญชี
-             actualPaymentToday = 0;
+            actualPaymentToday += paymentFromYesterday;
+        }
+
+        if (dayBeforeYesterdayData) {
+            // 2. ยอดเงิน 50% ที่เหลือจากยอดขายของ T-2 (ซึ่งคือ T-2.remainingBalance)
+            const remainingFromDayBefore = dayBeforeYesterdayData.remainingBalance;
+            actualPaymentToday += remainingFromDayBefore;
         }
 
         sale.actualPaymentToday = actualPaymentToday;
@@ -77,19 +77,17 @@ function calculatePayments(data) {
 
 
 // ----------------------------------------------------------------------
-// ฟังก์ชันการจัดการ UI และ Event Listeners
+// ฟังก์ชันการจัดการ UI และ Event Listeners (ไม่เปลี่ยนแปลง)
 // ----------------------------------------------------------------------
 
 // สร้าง Option สำหรับ Month Selector
 function populateMonthSelector() {
     const selector = document.getElementById('monthSelector');
-    selector.innerHTML = ''; // เคลียร์ของเก่า
+    selector.innerHTML = ''; 
 
-    // กรองและหาเดือน-ปีที่ไม่ซ้ำกัน
     const uniqueMonths = [...new Set(salesData.map(sale => sale.date.substring(0, 7)))];
-    uniqueMonths.sort().reverse(); // เรียงจากเดือนล่าสุด
+    uniqueMonths.sort().reverse(); 
 
-    // เพิ่มตัวเลือก "ทั้งหมด"
     const allOption = document.createElement('option');
     allOption.value = 'all';
     allOption.textContent = 'แสดงทั้งหมด';
@@ -103,7 +101,6 @@ function populateMonthSelector() {
         selector.appendChild(option);
     });
 
-    // ตั้งค่าเดือนปัจจุบันเป็นค่าเริ่มต้น
     if (uniqueMonths.length > 0 && selector.value !== 'all') {
         selector.value = uniqueMonths[0];
     } 
@@ -121,16 +118,14 @@ function displaySalesData() {
     const monthSelector = document.getElementById('monthSelector');
     const selectedMonth = monthSelector.value;
     
-    // คำนวณข้อมูลใหม่ทั้งหมดก่อนแสดง
     const calculatedData = calculatePayments(salesData);
 
-    // กรองข้อมูลตามเดือนที่เลือก
     const filteredData = calculatedData.filter(sale => {
         if (selectedMonth === 'all') return true;
         return sale.date.startsWith(selectedMonth);
     });
     
-    tableBody.innerHTML = ''; // เคลียร์ตาราง
+    tableBody.innerHTML = ''; 
     
     if (filteredData.length === 0) {
         tableBody.innerHTML = '<tr><td colspan="7" class="text-center p-4">ไม่พบข้อมูลในเดือนนี้</td></tr>';
@@ -138,7 +133,6 @@ function displaySalesData() {
         return;
     }
     
-    // อัพเดทชื่อเดือนที่แสดง
     const monthYearText = (selectedMonth === 'all' ? 'ทั้งหมด' : 
         selectedMonth.includes('-') ? `${getMonthName(parseInt(selectedMonth.split('-')[1]))} ${selectedMonth.split('-')[0]}` : '');
     document.getElementById('currentMonthYear').textContent = monthYearText;
@@ -147,10 +141,9 @@ function displaySalesData() {
     filteredData.forEach((sale, index) => {
         const originalIndex = salesData.findIndex(d => d.date === sale.date);
         
-        // สถานะและคลาส
-        // Note: สถานะ isReceived ในโค้ดนี้หมายถึงการรับเงินของยอด Actual Payment Today
+        // สถานะและคลาสสำหรับปุ่ม Toggle
         const statusClass = sale.isReceived ? 'status-received' : 'status-pending';
-        const statusText = sale.isReceived ? '✅ ได้รับแล้ว' : 'รอรับ / ยังไม่กด';
+        const statusText = sale.isReceived ? '✅ เข้าแล้ว' : '⚠️ ยังไม่เข้า'; 
 
         const row = tableBody.insertRow();
         row.innerHTML = `
@@ -159,14 +152,16 @@ function displaySalesData() {
             <td data-label="เงินเข้าวันถัดไป (บ.)">${sale.nextDayPayment.toFixed(2)}</td>
             <td data-label="เหลือในระบบ (บ.)">${sale.remainingBalance.toFixed(2)}</td>
             <td data-label="ยอดเข้าบัญชีจริง (บ.)"><strong>${sale.actualPaymentToday.toFixed(2)}</strong></td>
+            
             <td data-label="สถานะเข้าบัญชี" class="${statusClass}">
-                ${sale.actualPaymentToday > 0 ? // แสดงปุ่มเฉพาะวันที่ควรมีเงินเข้า
+                ${sale.actualPaymentToday > 0 ? 
                     `<button class="btn btn-sm ${sale.isReceived ? 'btn-success' : 'btn-warning'}" 
                              onclick="toggleReceivedStatus(${originalIndex})">
                         ${statusText}
-                    </button>` : 'N/A'
+                    </button>` : '<span class="text-muted">N/A</span>'
                 }
             </td>
+            
             <td data-label="เครื่องมือ">
                 <button class="btn btn-sm btn-info me-2" onclick="editSale(${originalIndex}, '${sale.date}', ${sale.amount})">✏️</button>
                 <button class="btn btn-sm btn-danger" onclick="deleteSale(${originalIndex})">🗑️</button>
@@ -175,10 +170,9 @@ function displaySalesData() {
     });
 }
 
-// ฟอร์แมตวันที่ให้เป็น D/M/Y (แบบไทย)
+// ฟอร์แมตวันที่ให้เป็น D/M/Y (แบบ ISO: YYYY-MM-DD)
 function formatDate(dateString) {
     const [year, month, day] = dateString.split('-');
-    // แปลงปี พ.ศ. (+543)
     return `${parseInt(day)}/${parseInt(month)}/${parseInt(year)}`; 
 }
 
@@ -194,7 +188,7 @@ document.getElementById('saveSaleBtn').addEventListener('click', () => {
     const date = dateInput.value;
     const amount = parseFloat(amountInput.value);
 
-    if (!date || isNaN(amount) || amount < 0) { // อนุญาตให้เป็น 0 ได้
+    if (!date || isNaN(amount) || amount < 0) { 
         Swal.fire('ข้อผิดพลาด!', 'กรุณาใส่วันที่และยอดขายที่ถูกต้อง', 'error');
         return;
     }
@@ -202,26 +196,23 @@ document.getElementById('saveSaleBtn').addEventListener('click', () => {
     const existingIndex = salesData.findIndex(sale => sale.date === date);
 
     if (existingIndex !== -1) {
-        // อัพเดทข้อมูลเดิม
         salesData[existingIndex].amount = amount;
         Swal.fire('อัพเดทสำเร็จ!', `ยอดขายวันที่ ${formatDate(date)} ถูกอัพเดทเป็น ${amount} บาท`, 'success');
     } else {
-        // เพิ่มข้อมูลใหม่
         const newSale = {
             date: date,
             amount: amount,
-            isReceived: false // สถานะเริ่มต้นสำหรับการรับเงิน
+            isReceived: false 
         };
         salesData.push(newSale);
         Swal.fire('บันทึกสำเร็จ!', `บันทึกยอดขายวันที่ ${formatDate(date)} จำนวน ${amount} บาท`, 'success');
     }
 
     saveSalesData();
-    loadSalesData(); // โหลดใหม่เพื่อให้เรียงวันที่ถูกต้อง
+    loadSalesData(); 
     populateMonthSelector();
     displaySalesData();
 
-    // ล้างฟอร์ม
     amountInput.value = '';
     dateInput.value = new Date().toISOString().substring(0, 10);
 });
@@ -268,7 +259,7 @@ function deleteSale(index) {
         cancelButtonText: 'ยกเลิก'
     }).then((result) => {
         if (result.isConfirmed) {
-            salesData.splice(index, 1); // ลบ 1 รายการที่ index
+            salesData.splice(index, 1); 
             saveSalesData();
             loadSalesData();
             populateMonthSelector();
@@ -278,17 +269,22 @@ function deleteSale(index) {
     });
 }
 
-// 4. สลับสถานะได้รับเงินแล้ว
+// 4. สลับสถานะได้รับเงินแล้ว (Toggle)
 function toggleReceivedStatus(index) {
     const saleDate = salesData[index].date;
     const currentStatus = salesData[index].isReceived;
-    salesData[index].isReceived = !currentStatus;
+    
+    // สลับสถานะ
+    salesData[index].isReceived = !currentStatus; 
+    
     saveSalesData();
     displaySalesData();
+    
+    // แสดง SweetAlert แจ้งสถานะ
     Swal.fire({
         icon: 'info',
         title: 'สถานะอัพเดท',
-        text: `ยอดเงินโอนเข้าบัญชีจากยอดขายวันที่ ${formatDate(saleDate)} ถูกตั้งค่าเป็น ${!currentStatus ? 'ได้รับแล้ว' : 'รอรับ'}`,
+        text: `ยอดเงินโอนเข้าบัญชีจากยอดขายวันที่ ${formatDate(saleDate)} ถูกตั้งค่าเป็น ${!currentStatus ? '✅ ได้รับแล้ว' : '⚠️ รอรับ'}`,
         timer: 1500,
         showConfirmButton: false
     });
@@ -379,9 +375,9 @@ document.getElementById('importBtn').addEventListener('click', () => {
                 importedData.forEach(item => {
                     const existingIndex = salesData.findIndex(sale => sale.date === item.date);
                     if (existingIndex !== -1) {
-                         salesData[existingIndex] = item; // แทนที่รายการที่มีวันที่ซ้ำ
+                         salesData[existingIndex] = item;
                     } else {
-                         salesData.push(item); // เพิ่มใหม่
+                         salesData.push(item);
                     }
                 });
 
@@ -404,22 +400,17 @@ document.getElementById('monthSelector').addEventListener('change', displaySales
 // การเริ่มต้นโปรแกรม
 // ----------------------------------------------------------------------
 
-// ตั้งค่าวันที่เริ่มต้นใน Input
 document.addEventListener('DOMContentLoaded', () => {
     const today = new Date().toISOString().substring(0, 10);
     document.getElementById('saleDate').value = today;
     
-    // 1. โหลดข้อมูล
     loadSalesData();
-    // 2. สร้างตัวเลือกเดือน
     populateMonthSelector();
-    // 3. แสดงข้อมูล
     displaySalesData();
 
-    // 4. PWA Service Worker (สำหรับทำให้ติดตั้งได้และทำงาน Offline)
+    // PWA Service Worker
     if ('serviceWorker' in navigator) {
         window.addEventListener('load', () => {
-            // ต้องแน่ใจว่า service-worker.js อยู่ใน root directory
             navigator.serviceWorker.register('/service-worker.js')
                 .then(reg => console.log('Service Worker: Registered'))
                 .catch(err => console.error('Service Worker: Registration failed: ', err));

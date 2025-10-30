@@ -18,6 +18,13 @@ body {
     vertical-align: middle;
 }
 
+/* ปรับขนาดปุ่มสถานะในตารางให้ใหญ่ขึ้นและกดง่าย */
+.table button.btn-sm { /* เป้าหมายปุ่มสถานะที่ใช้ class btn-sm ใน JS */
+    padding: 0.5rem 0.75rem; 
+    font-size: 1rem;       
+    min-width: 120px;      
+}
+
 /* สีสำหรับสถานะ */
 .status-pending {
     color: orange;
